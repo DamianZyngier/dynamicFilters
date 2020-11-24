@@ -1,8 +1,10 @@
 // ==UserScript==
 // @name         Dynamic Filters
+// @description  Make the JIRA filters more dynamic
 // @author       Damian Zyngier
 // @version      1.0
-// @description  Make the JIRA filters more dynamic
+// @homepage     https://github.com/DamianZyngier/dynamicFilters
+// @homepageURL  https://github.com/DamianZyngier/dynamicFilters
 // @match        https://*.atlassian.net/*RapidBoard.jspa*
 // @license      MIT
 // ==/UserScript==
