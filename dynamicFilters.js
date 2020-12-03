@@ -2,11 +2,11 @@
 // @name         Dynamic Filters
 // @description  Make the JIRA filters more dynamic
 // @author       Damian Zyngier
-// @version      1.0
+// @version      1.1
+// @license      MIT
 // @homepage     https://github.com/DamianZyngier/dynamicFilters
 // @homepageURL  https://github.com/DamianZyngier/dynamicFilters
 // @match        https://*.atlassian.net/*RapidBoard.jspa*
-// @license      MIT
 // ==/UserScript==
 
 (function() {
@@ -17,83 +17,85 @@
         "Alina Nowak"
     ];
 
-    function createFilters() {
-        console.log("=====================================================================================================================================================================================================");
-        setupAssignee();
+    var dfFields = {
+        "assignee": [],
+        "priority": [],
+        "project": [],
+        "epic": [],
+        "type": []
+    };
 
-    }
+    var dfFieldsActive = {
+        "assignee": [],
+        "priority": [],
+        "project": [],
+        "epic": [],
+        "type": [],
+        "searchtext": [],
+        "estimate": []
+    };
 
     var rapidView = new URLSearchParams(window.location.search).get('rapidView');
+    var setCookiesTimeout;
+    var createFiltersInterval;
+    var initializeContainerInterval;
+    var unfoldBacklogInterval;
+
+    if (/\bview=planning\b/.test (location.search) ) {
+        window.addEventListener('load', function() {
+            unfoldBacklogInterval = setInterval(unfoldBacklog, 1000);
+        }, false);
+    } else {
+        initializeContainerInterval = setInterval(initializeContainer, 100);
+        createFiltersInterval = setInterval(createFilters, 100);
+    }
 
     // https://openuserjs.org/scripts/KyleMit/Exclusive_Quick_Filters/source
     $("body").on("mouseup", ".df-avatar", function(e) {
         if ($(this).is(".df-active")) return;
         if (e.ctrlKey || e.shiftKey) return;
 
-        $(".df-avatar").each(function() {
-            $.removeCookie(rapidView + $(this).attr("name"));
-        });
-
+        dfFieldsActive["assignee"] = [];
         $(".df-avatar.df-active").removeClass("df-active");
     });
 
     // https://openuserjs.org/scripts/santa/Show_full_backlog_in_Jira_board/source
-    const unfoldBacklog = () => {
-        const elem = document.querySelector('.js-show-all-link');
-        if (elem) {
-            elem.click();
-            clearInterval(interval);
+    function unfoldBacklog() {
+        if ($('.js-show-all-link').first().click()) {
+            clearInterval(unfoldBacklogInterval);
         }
     };
 
-    if (/\bview=planning\b/.test (location.search) ) {
+    function initializeContainer() {
+        console.log("DF: " + arguments.callee.name);
+        if ($('#ghx-controls-work').length) {
+            $('<dd><a role="button" href="#" id="df-button" class="js-quickfilter-button ghx-active" title="Dynamic Filters">DF</a></dd>').insertAfter('#js-quickfilters-label');
+            $('<div id="df-container"><div id="df-label">Dynamic Filters:</div><div id="df-clear"><a role="button" href="#" class="df-disabled" title="Dynamic Filters">Clear</a></dd></div>').insertAfter('#js-work-quickfilters');
+        }
 
-        let interval;
-        window.addEventListener('load', () => {
-            interval = setInterval(unfoldBacklog, 1000);
-        }, false);
-    } else {
-        var initializeContainerInterval = setInterval(function() {
-            if ($('#ghx-controls-work').length) {
-                $('<dd><a role="button" href="#" id="df-button" class="js-quickfilter-button ghx-active" title="Dynamic Filters">DF</a></dd>').insertAfter('#js-quickfilters-label');
-                $('<div id="df-container"><div id="df-label">Dynamic Filters:</div><div id="df-clear"><a role="button" href="#" id="df-button" title="Dynamic Filters">Clear</a></dd></div>').insertAfter('#js-work-quickfilters');
-            }
-
-            if($('#df-container').length) {
-                clearInterval(initializeContainerInterval);
-                postInitializeFunc();
-            }
-        }, 100);
-
-        var initializeContainerInterval2 = setInterval(function() {
-            if ($('.ghx-columns').length && $('#df-container').length) {
-                clearInterval(initializeContainerInterval2);
-                createFilters();
-            }
-        }, 100);
-
+        if($('#df-container').length) {
+            console.log("DF clearInterval: " + arguments.callee.name);
+            clearInterval(initializeContainerInterval);
+            console.log("DF clearInterval: " + arguments.callee.name);
+            postInitializeContainer();
+        }
     }
 
-    function postInitializeFunc() {
-        var button = $("#df-button")[0];
-        var container = $("#df-container")[0];
-        $(button).click(function() {
-
-            if ($(container).css('display') == 'none') {
-                $(button).addClass("ghx-active");
-                $(container).slideDown("slow");
+    function postInitializeContainer() {
+        console.log("DF: " + arguments.callee.name);
+        $("#df-button").click(function() {
+            $("#df-button").toggleClass("ghx-active");
+            if ($("#df-container").css('display') == 'none') {
+                $("#df-container").slideDown("slow");
             } else {
-                $(button).removeClass("ghx-active");
-                $(container).slideUp("slow");
+                $("#df-container").slideUp("slow");
             }
         });
 
-        var buttonClear = $("#df-clear")[0];
-
-        $(buttonClear).click(function() {
-            $(".df-avatar").each(function() {
+        $("#df-clear").click(function() {
+            $(".df-active").each(function() {
                 $(this).removeClass("df-active");
-                $.removeCookie(rapidView + $(this).attr("name"));
+                removeProperty(dfFieldsActive, "assignee", $(this).attr("name"));
             });
             filterIssues();
         });
@@ -102,22 +104,54 @@
         $('#ghx-pool').on('DOMSubtreeModified', function (){
             clearTimeout($(this).data('timer'));
             $(this).data('timer', setTimeout(function(){
-                console.log('changed ' + $(this).html);
                 filterIssues();
             },10));
 
         });
 
-/*
-        $('.ghx-issue').waypoint(function() {
-            console.log('changed ' + $(this).html);
-            filterIssues();
-        });
-*/
 
+        $(".aui-nav-item").click(function() {
+            console.log("ELOOOOO");
+            // TODO!!!!!Jak klikam na pasek po lewej, niech się uruchomi skrypt od początku (ale nie zapętla w nieskończoność).
+
+            if (/\bview=reporting\b/.test (location.search) ) {
+                return;
+            }
+            if (/\bview=planning\b/.test (location.search) ) {
+                window.addEventListener('load', function() {
+                    unfoldBacklogInterval = setInterval(unfoldBacklog, 1000);
+                }, false);
+            } else {
+                $(".aui-nav-item").off()
+                initializeContainerInterval = setInterval(initializeContainer, 100);
+                createFiltersInterval = setInterval(createFilters, 100);
+            }
+        });
+    }
+
+    function initializeActiveFields() {
+        console.log("DF: " + arguments.callee.name);
+        // Assignees
+        $(".df-avatar").each(function() {
+            if (dfFieldsActive["assignee"].includes($(this).attr("name"))) {
+                $(this).addClass("df-active");
+            }
+        });
+    }
+
+    function createFilters() {
+        console.log("DF: " + arguments.callee.name);
+        if ($('.ghx-columns').length && $('#df-container').length) {
+            console.log("DF clearInterval: " + arguments.callee.name);
+            clearInterval(createFiltersInterval);
+            console.log("DF clearInterval: " + arguments.callee.name);
+            console.log("===============================================================================================================================================================================");
+            setupAssignee();
+        }
     }
 
     function setupAssignee() {
+        console.log("DF: " + arguments.callee.name);
 
         var assigneeList = [],
             assigneeTag, name, array, assigneeDiv;
@@ -176,20 +210,20 @@
         });
 
         $('#df-container-assignee').append('<div class="df-assignee-div unassigned" style="order: 666">' +
-                                           '<img src=document.location.protocol +"//"+ document.location.hostname + "/jira/secure/useravatar?size=medium&avatarId=10173" class="df-avatar ghx-avatar-img" name="Unassigned" alt="Assignee: Unassigned" data-tooltip="Assignee: Unassigned" /></div>');
+                                           '<img src="https://jira.deltavista.com/jira/secure/useravatar?size=medium&avatarId=10173" class="df-avatar ghx-avatar-img" name="Unassigned" alt="Assignee: Unassigned" data-tooltip="Assignee: Unassigned" /></div>');
 
         teamAssignee.forEach(setupTeamAssignee);
-        $(".df-avatar").each(applyFilter);
+        getCookies();
+        initializeActiveFields();
         filterIssues();
 
         $(".df-avatar").click(function() {
             if ($(this).hasClass("df-active")) {
-                $(this).removeClass("df-active");
-                $.removeCookie(rapidView + $(this).attr("name"));
+                removeProperty(dfFieldsActive, "assignee", $(this).attr("name"));
             } else {
-                $(this).addClass("df-active");
-                $.cookie(rapidView + $(this).attr("name"), 1);
+                addProperty(dfFieldsActive, "assignee", $(this).attr("name"));
             }
+            $(this).toggleClass("df-active");
 
             filterIssues();
         });
@@ -203,9 +237,15 @@
             $.cookie(rapidView + "df-sort-assignee", $(this).val());
             sortAssignee($(this).val());
         });
+
+        if ($(".df-active")[0]) {
+            console.log("Bajooooooooooooooooooo");
+            $("#df-clear").children().removeClass("df-disabled");
+        }
     }
 
     function setupTeamAssignee(assignee, i) {
+        console.log("DF: " + arguments.callee.name);
         if ($('#df-container-assignee').find("[name='" + assignee + "']").length) {
             $('#df-container-assignee').find("[name='" + assignee + "']").parent().css("order", i);
             $('#df-container-assignee').find("[name='" + assignee + "']").parent().addClass("team-assignee");
@@ -215,14 +255,9 @@
         }
     }
 
-    function applyFilter() {
-        if ($.cookie(rapidView + $(this).attr("name"))) {
-            $(this).addClass("df-active")
-        }
-    }
-
 
     function filterIssues() {
+        console.log("DF: " + arguments.callee.name);
         var assignees = [], hide;
         $(".df-assignee-div").each(function() {
             if ($(this).children().hasClass("df-active")) {
@@ -267,6 +302,7 @@
     }
 
     function sortAssignee(sortorder) {
+        console.log("DF: " + arguments.callee.name);
         var assignees = [], teamAssignees = [], allAssignees = [];
 
         $(".team-assignee").each(function() {
@@ -310,6 +346,48 @@
         return 0;
     }
 
+    function setCookies() {
+        console.log("DF: " + arguments.callee.name);
+        clearTimeout(setCookiesTimeout);
+        setCookiesTimeout = setTimeout(function() {
+            for (var k in dfFieldsActive) {
+                if (dfFieldsActive.hasOwnProperty(k)) {
+                    $.cookie(rapidView + ":" + k, JSON.stringify(dfFieldsActive[k]));
+                }
+            }
+        }, 1000);
+    }
+
+    function getCookies() {
+        console.log("DF: " + arguments.callee.name);
+        for (var k in dfFieldsActive) {
+            var cookie = $.cookie(rapidView + ":" + k);
+            if (cookie) {
+                dfFieldsActive[k] = JSON.parse(cookie);
+            }
+        }
+    }
+
+    function addProperty(array, key, value) {
+        console.log("DF: " + arguments.callee.name);
+        var index = $.inArray(value, array[key]);
+        index == -1 ? array[key].push(value) : false;
+        $("#df-clear").children().removeClass("df-disabled");
+        setCookies();
+    }
+
+    function removeProperty(array, key, value) {
+        console.log("DF: " + arguments.callee.name);
+        var index = $.inArray(value, array[key]);
+        index > -1 ? array[key].splice(index, 1) : false;
+        setCookies();
+
+        if (Object.keys(array).every(function(key){
+            return array[key].length === 0
+        })) {
+            $("#df-clear").children().addClass("df-disabled");
+        }
+    }
 
     var styles = `
 
@@ -447,15 +525,21 @@
             float: left;
         }
 
-        div#df-clear a:hover {
+        div#df-clear a:hover:not(.df-disabled) {
             border-color: rgb(63, 69, 71);
         }
 
-        div#df-clear a:active {
+        div#df-clear a:active:not(.df-disabled) {
             background-image: initial;
             background-color: rgb(42, 55, 79);
             border-color: transparent;
             color: rgb(232, 230, 227);
+        }
+
+        div#df-clear a.df-disabled {
+            pointer-events: none;
+            color: #344563;
+            text-decoration: line-through;
         }
 
         #df-label {
@@ -525,6 +609,3 @@
     document.head.appendChild(styleSheet)
 
 })();
-
-
-
