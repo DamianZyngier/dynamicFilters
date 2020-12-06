@@ -6,6 +6,7 @@
 // @license      MIT
 // @homepage     https://github.com/DamianZyngier/dynamicFilters
 // @homepageURL  https://github.com/DamianZyngier/dynamicFilters
+// @namespace    https://*.atlassian.net/*RapidBoard.jspa*
 // @match        https://*.atlassian.net/*RapidBoard.jspa*
 // ==/UserScript==
 
@@ -16,14 +17,6 @@
         "Jan Kowalski",
         "Alina Nowak"
     ];
-
-    var dfFields = {
-        "assignee": [],
-        "priority": [],
-        "project": [],
-        "epic": [],
-        "type": []
-    };
 
     var dfFieldsActive = {
         "assignee": [],
@@ -41,14 +34,8 @@
     var initializeContainerInterval;
     var unfoldBacklogInterval;
 
-    if (/\bview=planning\b/.test (location.search) ) {
-        window.addEventListener('load', function() {
-            unfoldBacklogInterval = setInterval(unfoldBacklog, 1000);
-        }, false);
-    } else {
-        initializeContainerInterval = setInterval(initializeContainer, 100);
-        createFiltersInterval = setInterval(createFilters, 100);
-    }
+    initializePlugin();
+
 
     // https://openuserjs.org/scripts/KyleMit/Exclusive_Quick_Filters/source
     $("body").on("mouseup", ".df-avatar", function(e) {
@@ -61,10 +48,52 @@
 
     // https://openuserjs.org/scripts/santa/Show_full_backlog_in_Jira_board/source
     function unfoldBacklog() {
+        console.log("DF: " + arguments.callee.name);
         if ($('.js-show-all-link').first().click()) {
             clearInterval(unfoldBacklogInterval);
         }
     };
+
+
+
+    function initializePlugin() {
+        console.log("DF: " + arguments.callee.name);
+
+        var searchParams = new URLSearchParams(window.location.search);
+
+        if ($("#df-container").length || !searchParams.has('rapidView')) {
+            console.log("DF: Container exists or rapidView do not exists");
+            return;
+        }
+
+        // Sprint
+        if (!(searchParams.has('view'))) {
+            console.log("DF: View sprint");
+            initializeContainerInterval = setInterval(initializeContainer, 100);
+            createFiltersInterval = setInterval(createFilters, 100);
+        }
+
+        // Backlog
+        if ((searchParams.get('view') === "planning.nodetail")) {
+            console.log("DF: View backlog");
+            unfoldBacklogInterval = setInterval(unfoldBacklog, 500);
+        }
+
+        $(".aui-nav-item").off("click");
+        $(".aui-nav-item").click(initializePluginFromSidebar);
+
+    }
+
+    function initializePluginFromSidebar() {
+        console.log("DF: " + arguments.callee.name);
+        $(".aui-nav-item").off("click");
+
+        setTimeout(function(){
+            initializePlugin();
+            $(".aui-nav-item").click(initializePluginFromSidebar);
+        }, 200);
+
+    }
 
     function initializeContainer() {
         console.log("DF: " + arguments.callee.name);
@@ -74,10 +103,10 @@
         }
 
         if($('#df-container').length) {
-            console.log("DF clearInterval: " + arguments.callee.name);
             clearInterval(initializeContainerInterval);
-            console.log("DF clearInterval: " + arguments.callee.name);
             postInitializeContainer();
+            $(".aui-nav-item").off("click");
+            $(".aui-nav-item").click(initializePluginFromSidebar);
         }
     }
 
@@ -107,25 +136,6 @@
                 filterIssues();
             },10));
 
-        });
-
-
-        $(".aui-nav-item").click(function() {
-            console.log("ELOOOOO");
-            // TODO!!!!!Jak klikam na pasek po lewej, niech się uruchomi skrypt od początku (ale nie zapętla w nieskończoność).
-
-            if (/\bview=reporting\b/.test (location.search) ) {
-                return;
-            }
-            if (/\bview=planning\b/.test (location.search) ) {
-                window.addEventListener('load', function() {
-                    unfoldBacklogInterval = setInterval(unfoldBacklog, 1000);
-                }, false);
-            } else {
-                $(".aui-nav-item").off()
-                initializeContainerInterval = setInterval(initializeContainer, 100);
-                createFiltersInterval = setInterval(createFilters, 100);
-            }
         });
     }
 
