@@ -86,8 +86,8 @@
 
     function initializePluginFromSidebar() {
         console.log("DF: " + arguments.callee.name);
-        $(".aui-nav-item").off("click");
 
+        $(".aui-nav-item").off("click");
         setTimeout(function(){
             initializePlugin();
             $(".aui-nav-item").click(initializePluginFromSidebar);
@@ -104,39 +104,40 @@
 
         if($('#df-container').length) {
             clearInterval(initializeContainerInterval);
-            postInitializeContainer();
+            $("#df-button").click(slideDF);
+            $("#df-clear").click(clearDF);
+
+            $('#ghx-pool').on('DOMSubtreeModified', function (){
+                clearTimeout($(this).data('timer'));
+                $(this).data('timer', setTimeout(function(){
+                    filterIssues();
+                },10));
+            });
+
             $(".aui-nav-item").off("click");
             $(".aui-nav-item").click(initializePluginFromSidebar);
         }
     }
 
-    function postInitializeContainer() {
+    function slideDF() {
         console.log("DF: " + arguments.callee.name);
-        $("#df-button").click(function() {
-            $("#df-button").toggleClass("ghx-active");
-            if ($("#df-container").css('display') == 'none') {
-                $("#df-container").slideDown("slow");
-            } else {
-                $("#df-container").slideUp("slow");
-            }
+
+        $("#df-button").toggleClass("ghx-active");
+        if ($("#df-container").css('display') == 'none') {
+            $("#df-container").slideDown("slow");
+        } else {
+            $("#df-container").slideUp("slow");
+        }
+    }
+
+    function clearDF() {
+        console.log("DF: " + arguments.callee.name);
+
+        $(".df-active").each(function() {
+            $(this).removeClass("df-active");
+            removeProperty(dfFieldsActive, "assignee", $(this).attr("name"));
         });
-
-        $("#df-clear").click(function() {
-            $(".df-active").each(function() {
-                $(this).removeClass("df-active");
-                removeProperty(dfFieldsActive, "assignee", $(this).attr("name"));
-            });
-            filterIssues();
-        });
-
-
-        $('#ghx-pool').on('DOMSubtreeModified', function (){
-            clearTimeout($(this).data('timer'));
-            $(this).data('timer', setTimeout(function(){
-                filterIssues();
-            },10));
-
-        });
+        filterIssues();
     }
 
     function initializeActiveFields() {
@@ -152,12 +153,72 @@
     function createFilters() {
         console.log("DF: " + arguments.callee.name);
         if ($('.ghx-columns').length && $('#df-container').length) {
-            console.log("DF clearInterval: " + arguments.callee.name);
             clearInterval(createFiltersInterval);
-            console.log("DF clearInterval: " + arguments.callee.name);
-            console.log("===============================================================================================================================================================================");
+            setupSearchField();
             setupAssignee();
         }
+    }
+
+    function setupSearchField() {
+        console.log("DF: " + arguments.callee.name);
+
+        $('#df-container').append('<div id="df-search-field">' +
+                                  '<input aria-label="Search for issues" id="df-search-input" class="text" type="text">' +
+                                  '<span id="df-search-icon" class="ghx-iconfont aui-icon aui-icon-small aui-iconfont-search-small">' +
+                                  '</span></div>');
+
+        $("#df-search-field")
+            .click(searchFieldOnClick)
+            .focusin(searchFieldOnFocusIn)
+            .focusout(searchFieldOnFocusOut);
+        $("#df-search-input").on('input', searchFieldOnInput);
+        $("#df-search-icon").click(searchIconOnClick);
+    }
+
+    function searchIconOnClick() {
+        console.log("DF: " + arguments.callee.name);
+        if ($("#df-search-icon").hasClass("aui-iconfont-remove")) {
+            $("#df-search-input").val("");
+            $("#df-search-input").blur();
+            searchFieldOnInput();
+            filterIssues();
+            event.stopImmediatePropagation();
+        }
+    }
+
+    function searchFieldOnClick() {
+        console.log("DF: " + arguments.callee.name);
+        if ($("#df-search-input:not(:focus)").length) {
+            $("#df-search-input").focus();
+        };
+    }
+
+    function searchFieldOnFocusIn() {
+        console.log("DF: " + arguments.callee.name);
+        $("#df-search-input").animate({
+            width: "150px"
+        }, 300);
+    }
+
+    function searchFieldOnFocusOut() {
+        console.log("DF: " + arguments.callee.name);
+        if(!$("#df-search-input").val()) {
+            $("#df-search-input").animate({
+                width: "15px"
+            }, 300);
+        }
+    }
+
+    function searchFieldOnInput() {
+        console.log("DF: " + arguments.callee.name);
+        if($("#df-search-input").val()) {
+            $("#df-search-icon").removeClass("aui-iconfont-search-small");
+            $("#df-search-icon").addClass("aui-iconfont-remove");
+        } else {
+            $("#df-search-icon").removeClass("aui-iconfont-remove");
+            $("#df-search-icon").addClass("aui-iconfont-search-small");
+        }
+        filterIssues();
     }
 
     function setupAssignee() {
@@ -166,34 +227,34 @@
         var assigneeList = [],
             assigneeTag, name, array, assigneeDiv;
 
-        $('.ghx-avatar').each(function() {
+        $('.ghx-avatar').children().each(function() {
 
-            assigneeTag = $(this).children();
-            if ($(assigneeTag).length !== 1) {
+            if ($(this).length !== 1) {
                 return;
             }
 
-            name = $(assigneeTag).attr('data-tooltip').split('Assignee: ').pop();
+            name = $(this).attr('data-tooltip').split('Assignee: ').pop();
 
             if (assigneeList.find(data => data.name === name)) {
                 return;
             }
 
-            if (assigneeTag.attr('src')) {
+            // Has images
+            if ($(this).attr('src')) {
                 assigneeList.push(
                     {
                         "name": name,
-                        "img": assigneeTag.attr('src')
+                        "img": $(this).attr('src')
                     }
                 );
             }
 
-            if (assigneeTag.attr('style')) {
-
+            // Without images
+            if ($(this).attr('style')) {
                 assigneeList.push(
                     {
                         "name": name,
-                        "img": assigneeTag.attr('style')
+                        "img": $(this).attr('style')
                     }
                 );
             }
@@ -249,7 +310,6 @@
         });
 
         if ($(".df-active")[0]) {
-            console.log("Bajooooooooooooooooooo");
             $("#df-clear").children().removeClass("df-disabled");
         }
     }
@@ -257,41 +317,43 @@
     function setupTeamAssignee(assignee, i) {
         console.log("DF: " + arguments.callee.name);
         if ($('#df-container-assignee').find("[name='" + assignee + "']").length) {
-            $('#df-container-assignee').find("[name='" + assignee + "']").parent().css("order", i);
-            $('#df-container-assignee').find("[name='" + assignee + "']").parent().addClass("team-assignee");
+            $('#df-container-assignee').find("[name='" + assignee + "']").parent().css("order", i).addClass("team-assignee");
         } else {
             $('#df-container-assignee').append('<div class="df-assignee-div team-assignee">' +
                                                '<span style="background-color: ' + getRandomColor() + '" class="df-avatar ghx-avatar-img ghx-auto-avatar" name="' + assignee + '" data-tooltip="Assignee: ' + assignee + '">' + assignee.charAt(0) + '</span></div>');
         }
     }
 
-
     function filterIssues() {
         console.log("DF: " + arguments.callee.name);
-        var assignees = [], hide;
+
+        var assignees = [], assignee, hide,
+            searchInput = $("#df-search-input").val();
         $(".df-assignee-div").each(function() {
             if ($(this).children().hasClass("df-active")) {
                 assignees.push($(this).children().attr("name"));
             }
         });
 
-        if (assignees.length === 0) {
-            $('.ghx-issue').each(function() {
+        if (!assignees.length && !searchInput) {
+            $('.ghx-issue').each(function()  {
                 $(this).removeClass("hide");
             });
             return;
         }
 
         $('.ghx-issue').each(function() {
-            hide = 1;
-            if ($(this).find(".ghx-avatar-img").length) {
-                if (assignees.includes($(this).find(".ghx-avatar-img").attr('data-tooltip').split('Assignee: ').pop())) {
-                    hide = 0;
-                }
-            } else {
-                if (assignees.includes("Unassigned")) {
-                    hide = 0;
-                }
+            hide = 1, assignee = "";
+            assignee = $(this).find(".ghx-avatar-img").attr('data-tooltip').split('Assignee: ').pop();
+
+            if (($(this).find(".ghx-avatar-img").length && assignees.includes(assignee)) || (!$(this).find(".ghx-avatar-img").length && assignees.includes("Unassigned"))) {
+                hide = 0;
+            }
+
+            console.log("DF: " + assignee);
+
+            if ($(this).text().toLowerCase().includes(searchInput.toLowerCase()) || assignee.toLowerCase().includes(searchInput.toLowerCase())) {
+                hide = 0;
             }
 
             if (hide === 1) {
@@ -300,7 +362,6 @@
                 $(this).removeClass("hide");
             }
         });
-
     }
 
     function getRandomColor(){
@@ -413,13 +474,16 @@
             padding: 2px 10px 0 0;
         }
 
-
         #ghx-header h1 span {
             display: inline-block;
         }
 
         span#subnav-title span {
             font-size: 20px;
+        }
+
+        .aui-nav-selected {
+            pointer-events: none;
         }
 
 
@@ -430,8 +494,7 @@
             text-decoration: underline;
         }
 
-       /* DF Assignee Sort */ /* DF Assignee Sort */ /* DF Assignee Sort */
-
+        /* DF Assignee Sort */ /* DF Assignee Sort */ /* DF Assignee Sort */
 
         #df-assignee-sort-div {
             height: 30px;
@@ -457,7 +520,6 @@
         #df-assignee-sort-radio-container {
             display: inline-block;
             margin-right: 10px;
-
         }
 
         #df-asssignee-sort-radio-container > *{
@@ -515,12 +577,25 @@
         /* DF Assignee Container */ /* DF Assignee Container */ /* DF Assignee Container */
 
         #df-container {
+            height: 30px;
             padding-bottom: 10px;
         }
 
         #df-container>div {
             height: 30px;
             display: inline-block;
+            float: left;
+        }
+
+        #df-label {
+            float: left;
+            padding-right: 10px;
+            color: #5e6c84;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 30px;
+            letter-spacing: 0;
+            text-transform: uppercase;
         }
 
         div#df-clear a {
@@ -552,15 +627,22 @@
             text-decoration: line-through;
         }
 
-        #df-label {
-            float: left;
-            padding-right: 10px;
-            color: #5e6c84;
-            font-size: 12px;
-            font-weight: 600;
-            line-height: 30px;
-            letter-spacing: 0;
-            text-transform: uppercase;
+
+
+        #df-search-input {
+            width: 15px;
+            padding: 5px 24px 5px 5px;
+            border: 2px solid #dfe1e6;
+            border-radius: 3px 3px 3px 3px;
+            -webkit-border-radius: 3px 3px 3px 3px;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+        }
+
+        #df-search-icon {
+            right: 20px;
+            cursor: pointer;
         }
 
         #df-container-assignee {
