@@ -133,6 +133,7 @@
     function clearDF() {
         console.log("DF: " + arguments.callee.name);
 
+        searchIconOnClick();
         $(".df-active").each(function() {
             $(this).removeClass("df-active");
             removeProperty(dfFieldsActive, "assignee", $(this).attr("name"));
@@ -214,9 +215,11 @@
         if($("#df-search-input").val()) {
             $("#df-search-icon").removeClass("aui-iconfont-search-small");
             $("#df-search-icon").addClass("aui-iconfont-remove");
+            $("#df-clear").children().removeClass("df-disabled");
         } else {
             $("#df-search-icon").removeClass("aui-iconfont-remove");
             $("#df-search-icon").addClass("aui-iconfont-search-small");
+            removeProperty(dfFieldsActive, "searchtext", "");
         }
         filterIssues();
     }
@@ -350,9 +353,7 @@
                 hide = 0;
             }
 
-            console.log("DF: " + assignee);
-
-            if ($(this).text().toLowerCase().includes(searchInput.toLowerCase()) || assignee.toLowerCase().includes(searchInput.toLowerCase())) {
+            if (searchInput != "" && ($(this).text().toLowerCase().includes(searchInput.toLowerCase()) || assignee.toLowerCase().includes(searchInput.toLowerCase()))) {
                 hide = 0;
             }
 
