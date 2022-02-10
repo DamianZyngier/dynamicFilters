@@ -347,7 +347,9 @@
 
         $('.ghx-issue').each(function() {
             hide = 1, assignee = "";
-            assignee = $(this).find(".ghx-avatar-img").attr('data-tooltip').split('Assignee: ').pop();
+            if ($(this).find(".ghx-avatar-img").attr('data-tooltip')) {
+                assignee = $(this).find(".ghx-avatar-img").attr('data-tooltip').split('Assignee: ').pop();
+            }
 
             if (($(this).find(".ghx-avatar-img").length && assignees.includes(assignee)) || (!$(this).find(".ghx-avatar-img").length && assignees.includes("Unassigned"))) {
                 hide = 0;
