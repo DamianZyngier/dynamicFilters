@@ -2,7 +2,7 @@
 // @name         Dynamic Filters
 // @description  Make the JIRA filters more dynamic
 // @author       Damian Zyngier
-// @version      1.1
+// @version      1.2
 // @license      MIT
 // @homepage     https://github.com/DamianZyngier/dynamicFilters
 // @homepageURL  https://github.com/DamianZyngier/dynamicFilters
@@ -17,6 +17,16 @@
         "Jan Kowalski",
         "Alina Nowak"
     ];
+
+    var dfFieldsActive = {
+        "assignee": [],
+        "priority": [],
+        "project": [],
+        "epic": [],
+        "type": [],
+        "searchtext": [],
+        "estimate": []
+    };
 
     var dfFieldsActive = {
         "assignee": [],
@@ -67,7 +77,7 @@
         }
 
         // Sprint
-        if (!(searchParams.has('view'))) {
+        if (!searchParams.has('view') || (searchParams.get('view') === "detail")) {
             console.log("DF: View sprint");
             initializeContainerInterval = setInterval(initializeContainer, 100);
             createFiltersInterval = setInterval(createFilters, 100);
@@ -111,7 +121,7 @@
                 clearTimeout($(this).data('timer'));
                 $(this).data('timer', setTimeout(function(){
                     filterIssues();
-                },10));
+                },20));
             });
 
             $(".aui-nav-item").off("click");
@@ -232,11 +242,11 @@
 
         $('.ghx-avatar').children().each(function() {
 
-            if ($(this).length !== 1) {
+            if ($(this).length !== 1 || !$(this).attr('title')) {
                 return;
             }
 
-            name = $(this).attr('data-tooltip').split('Assignee: ').pop();
+            name = $(this).attr('title').split('Assignee: ').pop();
 
             if (assigneeList.find(data => data.name === name)) {
                 return;
@@ -276,15 +286,15 @@
         assigneeList.forEach(function (assignee, i) {
             if (assignee.img.startsWith("http")) {
                 assigneeDiv = $('#df-container-assignee').append('<div class="df-assignee-div">' +
-                                                                 '<img src="' + assignee.img + '" class="df-avatar ghx-avatar-img" name="' + assignee.name + '" alt="Assignee: ' + assignee.name + '" data-tooltip="Assignee: ' + assignee.name + '" /></div>');
+                                                                 '<img src="' + assignee.img + '" class="df-avatar ghx-avatar-img" name="' + assignee.name + '" alt="Assignee: ' + assignee.name + '" title="Assignee: ' + assignee.name + '" /></div>');
             } else {
                 assigneeDiv = $('#df-container-assignee').append('<div class="df-assignee-div">' +
-                                                                 '<span style="' + assignee.img + '" class="df-avatar ghx-avatar-img ghx-auto-avatar" name="' + assignee.name + '" data-tooltip="Assignee: ' + assignee.name + '">' + assignee.name.charAt(0) + '</span></div>');
+                                                                 '<span style="' + assignee.img + '" class="df-avatar ghx-avatar-img ghx-auto-avatar" name="' + assignee.name + '" title="Assignee: ' + assignee.name + '">' + assignee.name.charAt(0) + '</span></div>');
             }
         });
 
         $('#df-container-assignee').append('<div class="df-assignee-div unassigned" style="order: 666">' +
-                                           '<img src="https://jira.deltavista.com/jira/secure/useravatar?size=medium&avatarId=10173" class="df-avatar ghx-avatar-img" name="Unassigned" alt="Assignee: Unassigned" data-tooltip="Assignee: Unassigned" /></div>');
+                                           '<img src="https://jira.deltavista.com/jira/secure/useravatar?size=medium&avatarId=10173" class="df-avatar ghx-avatar-img" name="Unassigned" alt="Assignee: Unassigned" title="Assignee: Unassigned" /></div>');
 
         teamAssignee.forEach(setupTeamAssignee);
         getCookies();
@@ -347,10 +357,9 @@
 
         $('.ghx-issue').each(function() {
             hide = 1, assignee = "";
-            if ($(this).find(".ghx-avatar-img").attr('data-tooltip')) {
-                assignee = $(this).find(".ghx-avatar-img").attr('data-tooltip').split('Assignee: ').pop();
+            if ($(this).find(".ghx-avatar-img").attr('title')) {
+                assignee = $(this).find(".ghx-avatar-img").attr('title').split('Assignee: ').pop();
             }
-
             if (($(this).find(".ghx-avatar-img").length && assignees.includes(assignee)) || (!$(this).find(".ghx-avatar-img").length && assignees.includes("Unassigned"))) {
                 hide = 0;
             }
@@ -368,6 +377,7 @@
     }
 
     function getRandomColor(){
+        console.log("DF: " + arguments.callee.name);
         function c() {
             var hex = Math.floor(Math.random()*256).toString(16);
             return ("0"+String(hex)).substr(-2);
@@ -399,6 +409,7 @@
     }
 
     function compareFirstNames(a, b) {
+        console.log("DF: " + arguments.callee.name);
         var splitA = a.split(" ");
         var splitB = b.split(" ");
         var lastA = splitA[0];
@@ -410,6 +421,7 @@
     }
 
     function compareLastNames(a, b) {
+        console.log("DF: " + arguments.callee.name);
         var splitA = a.split(" ");
         var splitB = b.split(" ");
         var lastA = splitA[splitA.length - 1];
@@ -486,6 +498,10 @@
         }
 
         .aui-nav-selected {
+            pointer-events: none;
+        }
+
+        .ghx-avatar .ghx-avatar-img {
             pointer-events: none;
         }
 
@@ -629,7 +645,6 @@
             color: #344563;
             text-decoration: line-through;
         }
-
 
 
         #df-search-input {
