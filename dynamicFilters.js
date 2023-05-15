@@ -11,22 +11,11 @@
 // ==/UserScript==
 
 (function() {
-    'use strict';
 
     var teamAssignee = [
         "Jan Kowalski",
         "Alina Nowak"
     ];
-
-    var dfFieldsActive = {
-        "assignee": [],
-        "priority": [],
-        "project": [],
-        "epic": [],
-        "type": [],
-        "searchtext": [],
-        "estimate": []
-    };
 
     var dfFieldsActive = {
         "assignee": [],
