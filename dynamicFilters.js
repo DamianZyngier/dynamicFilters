@@ -2,8 +2,9 @@
 // @name         Dynamic Filters
 // @description  Make the JIRA filters more dynamic
 // @author       Damian Zyngier
-// @version      1.2
+// @version      1.3
 // @license      MIT
+// @require      https://raw.githubusercontent.com/carhartl/jquery-cookie/master/src/jquery.cookie.js
 // @homepage     https://github.com/DamianZyngier/dynamicFilters
 // @homepageURL  https://github.com/DamianZyngier/dynamicFilters
 // @namespace    https://*.atlassian.net/*RapidBoard.jspa*
@@ -13,8 +14,8 @@
 (function() {
 
     var teamAssignee = [
-        "Jan Kowalski",
-        "Alina Nowak"
+        // "Jan Kowalski",
+        // "Alina Nowak"
     ];
 
     var dfFieldsActive = {
@@ -231,11 +232,13 @@
 
         $('.ghx-avatar').children().each(function() {
 
-            if ($(this).length !== 1 || !$(this).attr('title')) {
+        console.log("DF: " + $(this).attr('alt'));
+
+            if ($(this).length !== 1 || !$(this).attr('alt')) {
                 return;
             }
 
-            name = $(this).attr('title').split('Assignee: ').pop();
+            name = $(this).attr('alt').split('Assignee: ').pop();
 
             if (assigneeList.find(data => data.name === name)) {
                 return;
@@ -346,8 +349,8 @@
 
         $('.ghx-issue').each(function() {
             hide = 1, assignee = "";
-            if ($(this).find(".ghx-avatar-img").attr('title')) {
-                assignee = $(this).find(".ghx-avatar-img").attr('title').split('Assignee: ').pop();
+            if ($(this).find(".ghx-avatar-img").attr('alt')) {
+                assignee = $(this).find(".ghx-avatar-img").attr('alt').split('Assignee: ').pop();
             }
             if (($(this).find(".ghx-avatar-img").length && assignees.includes(assignee)) || (!$(this).find(".ghx-avatar-img").length && assignees.includes("Unassigned"))) {
                 hide = 0;
