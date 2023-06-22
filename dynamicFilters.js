@@ -232,13 +232,11 @@
 
         $('.ghx-avatar').children().each(function() {
 
-        console.log("DF: " + $(this).attr('alt'));
-
-            if ($(this).length !== 1 || !$(this).attr('alt')) {
+            if ($(this).length !== 1 || !$(this).attr('title')) {
                 return;
             }
 
-            name = $(this).attr('alt').split('Assignee: ').pop();
+            name = $(this).attr('title').split('Assignee: ').pop();
 
             if (assigneeList.find(data => data.name === name)) {
                 return;
@@ -349,8 +347,8 @@
 
         $('.ghx-issue').each(function() {
             hide = 1, assignee = "";
-            if ($(this).find(".ghx-avatar-img").attr('alt')) {
-                assignee = $(this).find(".ghx-avatar-img").attr('alt').split('Assignee: ').pop();
+            if ($(this).find(".ghx-avatar-img").attr('title')) {
+                assignee = $(this).find(".ghx-avatar-img").attr('title').split('Assignee: ').pop();
             }
             if (($(this).find(".ghx-avatar-img").length && assignees.includes(assignee)) || (!$(this).find(".ghx-avatar-img").length && assignees.includes("Unassigned"))) {
                 hide = 0;
